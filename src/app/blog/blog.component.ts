@@ -1,8 +1,10 @@
 import {Component, OnInit} from '@angular/core';
 import { Router } from '@angular/router';
 import axios from 'axios';
+import {Article} from "./article";
+import {FormBuilder, FormGroup} from '@angular/forms';
 @Component({
-  selector: 'app-blog',
+  selector: 'blog',
   templateUrl: './blog.component.html',
   styleUrls: ['./blog.component.css']
 })
@@ -10,25 +12,29 @@ import axios from 'axios';
 //   providedIn:'root'
 // })
 export class BlogComponent implements OnInit {
-  article_form:any ={
-    title:"",
-    body:"",
-    tags_input:"",
-  };
-  search_form:any={
-    search_input: ""
-  };
-  search_results:String[]=[];
-  private result: Object | undefined;
-  private tag: Object | undefined;
+  title:String ="";
+  body:String="";
+  tags_input="";
 
-  constructor(private router : Router) {
+  checkoutForm: FormGroup  =this.formBuilder.group({
+     title:this.title,
+     body:this.body,
+     tags:this.tags_input,
+  });
+  search_input: String | undefined="";
+  searchFrom:FormGroup =this.formBuilder.group({
+    search_input:this.search_input
+  });
 
+
+  search_results:Article[]=[];
+  result: Article | undefined;
+  tag: Object | undefined;
+
+  constructor(private router : Router,private formBuilder: FormBuilder,) {
   }
 
   ngOnInit(): void {
-    axios.defaults.xsrfHeaderName = "X-CSRFToken";
-    axios.defaults.xsrfCookieName = 'XSRF-TOKEN';
     this.listArticles();
   };
   getTags():Array<String> {
@@ -36,12 +42,9 @@ export class BlogComponent implements OnInit {
     return this.article_form["tags_input"].split(",");
   };
   sanitizeInput() {
-    let input = JSON.parse(JSON.stringify(this.article_form));
-    input.tags = this.getTags();
-
-    delete input.tags_input;
-
-    return input;
+    this.checkoutForm.patchValue({tags:"tags".split(",")})
+    console.log(this.checkoutForm.value);
+    return this.checkoutForm.value;
   };
   addArticle():void {
     let input = this.sanitizeInput();
@@ -53,24 +56,23 @@ export class BlogComponent implements OnInit {
         'Content-type': 'application/json'
       }
     })
-    // .then(console.log("Success!"))
-    .then(_ => this.resetSearch())
+    .then(_ => {
+      console.log("Success!")
+      this.resetSearch()
+    })
     .then(() => this.search_results.push(input));
     this.cleanFields();
   };
   cleanFields():void {
     // @ts-ignore
-    this.article_form.title="";
-    // @ts-ignore
-    this.article_form.body="";
-    // @ts-ignore
-    this.article_form.tags_input="";
+    this.checkoutForm.reset()
   };
   searchArticle() {
-    this.searchArticles(this.search_form);
+    this.searchArticles(this.searchFrom.value);
   };
 
-  searchArticles(searchInput: Object) {
+  searchArticles(searchInput: String|undefined) {
+    console.log(searchInput);
       axios.post('/api/articles/searchV2/',
       searchInput,
     {
@@ -83,8 +85,8 @@ export class BlogComponent implements OnInit {
     }).catch(err => console.log(err))
   };
   listArticles():void {
-    let input = {};
-    this.searchArticles(input);
+
+    this.searchArticles("");
   };
   resetSearch() :void{
    // @ts-ignore
